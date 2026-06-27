@@ -19,8 +19,8 @@ blackShield.ZIndex = 1
 blackShield.Parent = screenGui
 
 local menuFrame = Instance.new("Frame")
-menuFrame.Size = UDim2.new(0, 300, 0, 150)
-menuFrame.Position = UDim2.new(0.5, -150, 0.4, -75)
+menuFrame.Size = UDim2.new(0, 300, 0, 210)
+menuFrame.Position = UDim2.new(0.5, -150, 0.4, -105)
 menuFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 menuFrame.BorderSizePixel = 2
 menuFrame.BorderColor3 = Color3.fromRGB(70, 70, 70)
@@ -60,6 +60,47 @@ toggleButton.TextSize = 14
 toggleButton.Font = Enum.Font.SourceSansBold
 toggleButton.ZIndex = 3
 toggleButton.Parent = menuFrame
+
+local fpsLabel = Instance.new("TextLabel")
+fpsLabel.Size = UDim2.new(0, 100, 0, 30)
+fpsLabel.Position = UDim2.new(0, 40, 0, 150)
+fpsLabel.BackgroundTransparency = 1
+fpsLabel.Text = "FPS Cap:"
+fpsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+fpsLabel.TextSize = 14
+fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
+fpsLabel.Font = Enum.Font.SourceSansBold
+fpsLabel.ZIndex = 3
+fpsLabel.Parent = menuFrame
+
+local fpsInput = Instance.new("TextBox")
+fpsInput.Size = UDim2.new(0, 120, 0, 30)
+fpsInput.Position = UDim2.new(0, 140, 0, 150)
+fpsInput.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+fpsInput.BorderSizePixel = 1
+fpsInput.BorderColor3 = Color3.fromRGB(60, 60, 60)
+fpsInput.Text = "60" -- Default fallback text display
+fpsInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+fpsInput.TextSize = 14
+fpsInput.Font = Enum.Font.SourceSans
+fpsInput.ClearTextOnFocus = false
+fpsInput.ZIndex = 3
+fpsInput.Parent = menuFrame
+
+fpsInput.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		local num = tonumber(fpsInput.Text)
+		if num and num > 0 then
+			if setfpscap then
+				setfpscap(num)
+			else
+				fpsInput.Text = "Not Supported"
+			end
+		else
+			fpsInput.Text = "Invalid"
+		end
+	end
+end)
 
 local dragging = false
 local dragInput, dragStart, startPos
