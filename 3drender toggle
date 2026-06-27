@@ -1,0 +1,131 @@
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local UserInputService = game:GetService("UserInputService")
+
+local localPlayer = Players.LocalPlayer
+local playerGui = localPlayer:WaitForChild("PlayerGui")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "RenderMenuUi"
+screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true 
+screenGui.Parent = playerGui
+
+local blackShield = Instance.new("Frame")
+blackShield.Size = UDim2.new(1, 0, 1, 0)
+blackShield.BackgroundColor3 = Color3.fromRGB(15, 15, 15) 
+blackShield.BackgroundTransparency = 1 
+blackShield.ZIndex = 1 
+blackShield.Parent = screenGui
+
+local menuFrame = Instance.new("Frame")
+menuFrame.Size = UDim2.new(0, 300, 0, 150)
+menuFrame.Position = UDim2.new(0.5, -150, 0.4, -75)
+menuFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+menuFrame.BorderSizePixel = 2
+menuFrame.BorderColor3 = Color3.fromRGB(70, 70, 70)
+menuFrame.Active = true
+menuFrame.ZIndex = 2
+menuFrame.Parent = screenGui
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 40)
+titleLabel.Position = UDim2.new(0, 0, 0, 0)
+titleLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+titleLabel.Text = "xi's 3drender toggle"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 14
+titleLabel.Font = Enum.Font.SourceSansBold
+titleLabel.ZIndex = 3
+titleLabel.Parent = menuFrame
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, 0, 0, 30)
+statusLabel.Position = UDim2.new(0, 0, 0, 50)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "3d render is on"
+statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+statusLabel.TextSize = 14
+statusLabel.Font = Enum.Font.SourceSans
+statusLabel.ZIndex = 3
+statusLabel.Parent = menuFrame
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 220, 0, 40)
+toggleButton.Position = UDim2.new(0.5, -110, 0, 90)
+toggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+toggleButton.Text = "turn off 3drender"
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.TextSize = 14
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.ZIndex = 3
+toggleButton.Parent = menuFrame
+
+local dragging = false
+local dragInput, dragStart, startPos
+
+local function updateDrag(input)
+	local delta = input.Position - dragStart
+	menuFrame.Position = UDim2.new(
+		startPos.X.Scale, 
+		startPos.X.Offset + delta.X, 
+		startPos.Y.Scale, 
+		startPos.Y.Offset + delta.Y
+	)
+end
+
+menuFrame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = menuFrame.Position
+		
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+menuFrame.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		updateDrag(input)
+	end
+end)
+
+local worldSuspended = false
+
+local function setWorldRendering(suspended)
+	worldSuspended = suspended
+	
+	if worldSuspended then
+		blackShield.BackgroundTransparency = 0
+		Lighting.GlobalShadows = false 
+		
+		statusLabel.Text = "u cant see"
+		statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+		toggleButton.Text = "unfuck urself"
+		toggleButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+	else
+		blackShield.BackgroundTransparency = 1
+		Lighting.GlobalShadows = true
+		
+		statusLabel.Text = "3d render is on"
+		statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+		toggleButton.Text = "turn off 3drender"
+		toggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+	end
+end
+
+toggleButton.MouseButton1Click:Connect(function()
+	setWorldRendering(not worldSuspended)
+end)
+
+setWorldRendering(true)
