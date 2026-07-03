@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
 
 local localPlayer = Players.LocalPlayer
 local playerGui = localPlayer:WaitForChild("PlayerGui")
@@ -79,7 +80,7 @@ fpsInput.Position = UDim2.new(0, 140, 0, 150)
 fpsInput.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 fpsInput.BorderSizePixel = 1
 fpsInput.BorderColor3 = Color3.fromRGB(60, 60, 60)
-fpsInput.Text = "60" -- Default fallback text display
+fpsInput.Text = "60" 
 fpsInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 fpsInput.TextSize = 14
 fpsInput.Font = Enum.Font.SourceSans
@@ -87,86 +88,127 @@ fpsInput.ClearTextOnFocus = false
 fpsInput.ZIndex = 3
 fpsInput.Parent = menuFrame
 
+local configFileName = "xi_render_config.json"
+
+local function saveConfig(fpsValue)
+    if writefile then
+        local configData = {
+            fpsCap = fpsValue
+        }
+        local success, jsonString = pcall(function() return HttpService:JSONEncode(configData) end)
+        if success then
+            writefile(configFileName, jsonString)
+        end
+    end
+end
+
+local function loadConfig()
+    if readfile and isfile and isfile(configFileName) then
+        local success, content = pcall(function() return readfile(configFileName) end)
+        if success then
+            local decodeSuccess, configData = pcall(function() return HttpService:JSONDecode(content) end)
+            if decodeSuccess and configData and configData.fpsCap then
+                return configData.fpsCap
+            end
+        end
+    end
+    return nil
+end
+
 fpsInput.FocusLost:Connect(function(enterPressed)
-	if enterPressed then
-		local num = tonumber(fpsInput.Text)
-		if num and num > 0 then
-			if setfpscap then
-				setfpscap(num)
-			else
-				fpsInput.Text = "Not Supported"
-			end
-		else
-			fpsInput.Text = "Invalid"
-		end
-	end
+    if enterPressed then
+        local num = tonumber(fpsInput.Text)
+        if num and num > 0 then
+            if setfpscap then
+                setfpscap(num)
+                saveConfig(num)
+            else
+                fpsInput.Text = "Not Supported"
+            end
+        else
+            fpsInput.Text = "Invalid"
+        end
+    end
 end)
 
 local dragging = false
 local dragInput, dragStart, startPos
 
 local function updateDrag(input)
-	local delta = input.Position - dragStart
-	menuFrame.Position = UDim2.new(
-		startPos.X.Scale, 
-		startPos.X.Offset + delta.X, 
-		startPos.Y.Scale, 
-		startPos.Y.Offset + delta.Y
-	)
+    local delta = input.Position - dragStart
+    menuFrame.Position = UDim2.new(
+        startPos.X.Scale, 
+        startPos.X.Offset + delta.X, 
+        startPos.Y.Scale, 
+        startPos.Y.Offset + delta.Y
+    )
 end
 
 menuFrame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		dragging = true
-		dragStart = input.Position
-		startPos = menuFrame.Position
-		
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then
-				dragging = false
-			end
-		end)
-	end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = menuFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
 end)
 
 menuFrame.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-		dragInput = input
-	end
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-	if input == dragInput and dragging then
-		updateDrag(input)
-	end
+    if input == dragInput and dragging then
+        updateDrag(input)
+    end
 end)
 
 local worldSuspended = false
 
 local function setWorldRendering(suspended)
-	worldSuspended = suspended
-	
-	if worldSuspended then
-		blackShield.BackgroundTransparency = 0
-		Lighting.GlobalShadows = false 
-		
-		statusLabel.Text = "u cant see"
-		statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-		toggleButton.Text = "unfuck urself"
-		toggleButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-	else
-		blackShield.BackgroundTransparency = 1
-		Lighting.GlobalShadows = true
-		
-		statusLabel.Text = "3d render is on"
-		statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-		toggleButton.Text = "turn off 3drender"
-		toggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-	end
+    worldSuspended = suspended
+    
+    if worldSuspended then
+        blackShield.BackgroundTransparency = 0
+        Lighting.GlobalShadows = false 
+        
+        statusLabel.Text = "u cant see"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        toggleButton.Text = "unfuck urself"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+    else
+        blackShield.BackgroundTransparency = 1
+        Lighting.GlobalShadows = true
+        
+        statusLabel.Text = "3d render is on"
+        statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        toggleButton.Text = "turn off 3drender"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    end
 end
 
 toggleButton.MouseButton1Click:Connect(function()
-	setWorldRendering(not worldSuspended)
+    setWorldRendering(not worldSuspended)
 end)
 
 setWorldRendering(true)
+
+local savedFPS = loadConfig()
+if savedFPS then
+    fpsInput.Text = tostring(savedFPS)
+    if setfpscap then
+        setfpscap(savedFPS)
+    end
+else
+    local defaultFPS = tonumber(fpsInput.Text)
+    if defaultFPS and setfpscap then
+        setfpscap(defaultFPS)
+    end
+end
