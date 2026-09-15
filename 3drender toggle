@@ -89,11 +89,13 @@ fpsInput.ZIndex = 3
 fpsInput.Parent = menuFrame
 
 local configFileName = "xi_render_config.json"
+local worldSuspended = false
 
-local function saveConfig(fpsValue)
+local function saveConfig(fpsValue, renderDisabled)
     if writefile then
         local configData = {
-            fpsCap = fpsValue
+            fpsCap = fpsValue,
+            renderDisabled = renderDisabled
         }
         local success, jsonString = pcall(function() return HttpService:JSONEncode(configData) end)
         if success then
@@ -107,13 +109,42 @@ local function loadConfig()
         local success, content = pcall(function() return readfile(configFileName) end)
         if success then
             local decodeSuccess, configData = pcall(function() return HttpService:JSONDecode(content) end)
-            if decodeSuccess and configData and configData.fpsCap then
-                return configData.fpsCap
+            if decodeSuccess and type(configData) == "table" then
+                return configData
             end
         end
     end
     return nil
 end
+
+local function setWorldRendering(suspended)
+    worldSuspended = suspended
+    
+    if worldSuspended then
+        blackShield.BackgroundTransparency = 0
+        Lighting.GlobalShadows = false 
+        
+        statusLabel.Text = "u cant see"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        toggleButton.Text = "unfuck urself"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+    else
+        blackShield.BackgroundTransparency = 1
+        Lighting.GlobalShadows = true
+        
+        statusLabel.Text = "3d render is on"
+        statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        toggleButton.Text = "turn off 3drender"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    end
+end
+
+toggleButton.MouseButton1Click:Connect(function()
+    local newState = not worldSuspended
+    setWorldRendering(newState)
+    local currentFps = tonumber(fpsInput.Text) or 60
+    saveConfig(currentFps, newState)
+end)
 
 fpsInput.FocusLost:Connect(function(enterPressed)
     if enterPressed then
@@ -121,7 +152,7 @@ fpsInput.FocusLost:Connect(function(enterPressed)
         if num and num > 0 then
             if setfpscap then
                 setfpscap(num)
-                saveConfig(num)
+                saveConfig(num, worldSuspended)
             else
                 fpsInput.Text = "Not Supported"
             end
@@ -170,43 +201,25 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
-local worldSuspended = false
+-- Initialization from Config
+local config = loadConfig()
 
-local function setWorldRendering(suspended)
-    worldSuspended = suspended
+if config then
+    -- Set render state from saved config (defaults to false if not saved)
+    local initialRenderDisabled = config.renderDisabled or false
+    setWorldRendering(initialRenderDisabled)
     
-    if worldSuspended then
-        blackShield.BackgroundTransparency = 0
-        Lighting.GlobalShadows = false 
-        
-        statusLabel.Text = "u cant see"
-        statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-        toggleButton.Text = "unfuck urself"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-    else
-        blackShield.BackgroundTransparency = 1
-        Lighting.GlobalShadows = true
-        
-        statusLabel.Text = "3d render is on"
-        statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-        toggleButton.Text = "turn off 3drender"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    end
-end
-
-toggleButton.MouseButton1Click:Connect(function()
-    setWorldRendering(not worldSuspended)
-end)
-
-setWorldRendering(true)
-
-local savedFPS = loadConfig()
-if savedFPS then
-    fpsInput.Text = tostring(savedFPS)
-    if setfpscap then
-        setfpscap(savedFPS)
+    -- Set FPS from saved config
+    if config.fpsCap then
+        fpsInput.Text = tostring(config.fpsCap)
+        if setfpscap then
+            setfpscap(config.fpsCap)
+        end
     end
 else
+    -- Default state if no config exists (Render ON by default)
+    setWorldRendering(false)
+    
     local defaultFPS = tonumber(fpsInput.Text)
     if defaultFPS and setfpscap then
         setfpscap(defaultFPS)
